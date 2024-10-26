@@ -1,0 +1,399 @@
+hand gesture recognization
+function frame = browse(source,callbackdata)
+        [filename, pathname]=uigetfile({'*.jpg;*.tif;*.png;*.gif','All Image Files';...
+            '*.*','All Files' },'select test image');
+        fullfilename=fullfile(pathname,filename);
+        frame=imread(fullfilename);
+ %       figure,image(frame);
+         
+‎captureGUI.fig
+18.3 KB
+Binary file not shown.
+‎captureGUI.m
++145
+Original file line number	Diff line number	Diff line change
+@@ -0,0 +1,145 @@
+function varargout = captureGUI(varargin)
+% CAPTUREGUI MATLAB code for captureGUI.fig
+%      CAPTUREGUI, by itself, creates a new CAPTUREGUI or raises the existing
+%      singleton*.
+%
+%      H = CAPTUREGUI returns the handle to a new CAPTUREGUI or the handle to
+%      the existing singleton*.
+%
+%      CAPTUREGUI('CALLBACK',hObject,eventData,handles,...) calls the local
+%      function named CALLBACK in CAPTUREGUI.M with the given input arguments.
+%
+%      CAPTUREGUI('Property','Value',...) creates a new CAPTUREGUI or raises the
+%      existing singleton*.  Starting from the left, property value pairs are
+%      applied to the GUI before captureGUI_OpeningFcn gets called.  An
+%      unrecognized property name or invalid value makes property application
+%      stop.  All inputs are passed to captureGUI_OpeningFcn via varargin.
+%
+%      *See GUI Options on GUIDE's Tools menu.  Choose "GUI allows only one
+%      instance to run (singleton)".
+%
+% See also: GUIDE, GUIDATA, GUIHANDLES
+% Edit the above text to modify the response to help captureGUI
+% Last Modified by GUIDE v2.5 31-Mar-2016 01:28:04
+% Begin initialization code - DO NOT EDIT
+gui_Singleton = 1;
+gui_State = struct('gui_Name',       mfilename, ...
+                   'gui_Singleton',  gui_Singleton, ...
+                   'gui_OpeningFcn', @captureGUI_OpeningFcn, ...
+                   'gui_OutputFcn',  @captureGUI_OutputFcn, ...
+                   'gui_LayoutFcn',  [] , ...
+                   'gui_Callback',   []);
+if nargin && ischar(varargin{1})
+    gui_State.gui_Callback = str2func(varargin{1});
+end
+if nargout
+    [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
+else
+    gui_mainfcn(gui_State, varargin{:});
+end
+% End initialization code - DO NOT EDIT
+% --- Executes just before captureGUI is made visible.
+function captureGUI_OpeningFcn(hObject, eventdata, handles, varargin)
+% This function has no output args, see OutputFcn.
+% hObject    handle to figure
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% varargin   command line arguments to captureGUI (see VARARGIN)
+% Choose default command line output for captureGUI
+handles.output = hObject;
+% Update handles structure
+guidata(hObject, handles);
+% UIWAIT makes captureGUI wait for user response (see UIRESUME)
+% uiwait(handles.figure1);
+% --- Outputs from this function are returned to the command line.
+function varargout = captureGUI_OutputFcn(hObject, eventdata, handles) 
+% varargout  cell array for returning output args (see VARARGOUT);
+% hObject    handle to figure
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% Get default command line output from handles structure
+varargout{1} = handles.output;
+%-------------Code for background--------------
+% This creates the 'background' axes
+ha = axes('units','normalized', ...
+            'position',[0 0 1 1]);
+% Move the background axes to the bottom
+uistack(ha,'bottom');
+% Load in a background image and display it using the correct colors
+% The image used below, is in the Image Processing Toolbox.  If you do not have %access to this toolbox, you can use another image file instead.
+I=imread('matrix.jpg');
+hi = imagesc(I)
+colormap gray
+% Turn the handlevisibility off so that we don't inadvertently plot into the axes again
+% Also, make the axes invisible
+set(ha,'handlevisibility','off', ...
+            'visible','off')
+%To adjust transparency of background image.
+set(hi,'alphadata',.7)
+%------------------------------------------
+% --- Executes on button press in pbPreview.
+function pbPreview_Callback(hObject, eventdata, handles)
+% hObject    handle to pbPreview (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% choose which webcam (winvideo-1) and which  mode (YUY2_176x144)
+global vid
+%vid = videoinput('winvideo', 1, 'YUY2_176x144');
+vid = videoinput('winvideo');
+src=getselectedsource(vid);
+% only capture one frame per trigger, we are not recording a video
+vid.FramesPerTrigger = 1;
+% output would image in RGB color space
+vid.ReturnedColorspace = 'rgb';
+% tell matlab to start the webcam on user request, not automatically
+triggerconfig(vid, 'manual');
+% we need this to know the image height and width
+vidRes = get(vid, 'VideoResolution');
+% image width
+imWidth = vidRes(1);
+% image height
+imHeight = vidRes(2);
+% number of bands of our image (should be 3 because it's RGB)
+nBands = get(vid, 'NumberOfBands');
+% create an empty image container and show it on axPreview
+hImage = image(zeros(imHeight, imWidth, nBands), 'parent', handles.axPreview);
+% begin the webcam preview
+preview(vid, hImage);
+% --- Executes on button press in pbCapture.
+function pbCapture_Callback(hObject, eventdata, handles)
+% hObject    handle to pbCapture (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global vid
+% prepare for capturing the image preview
+start(vid); 
+% pause for 3 seconds to give our webcam a "warm-up" time
+pause(1); 
+% do capture!
+trigger(vid);
+% stop the preview
+stoppreview(vid);
+% get the captured image data and save it on capt1 variable
+capt1 = getdata(vid);
+% capt1=imcrop(capt1,[0 207 352 720]);
+% now write capt1 into file named captured.png
+imwrite(capt1, 'frame.png');
+imshow(capt1);
+% just dialog that we are done capturing
+warndlg('Image captured!');
+‎extractGesture.m
++38
+Original file line number	Diff line number	Diff line change
+@@ -0,0 +1,38 @@
+function img2 = extractGesture(img_orig)
+%Read the image, and capture the dimensions
+%figure,imshow(img_orig);
+%img_orig = imread('hand3.jpg');
+height = size(img_orig,1);
+width = size(img_orig,2);
+%Initialize the output images
+out = img_orig;
+bin = zeros(height,width);
+%Convert the image from RGB to YCbCr
+img_ycbcr = rgb2ycbcr(img_orig);
+Cb = img_ycbcr(:,:,2);
+Cr = img_ycbcr(:,:,3);
+%Detect Skin
+[r,c,v] = find(Cb>=77 & Cb<=127 & Cr>=133 & Cr<=173);
+numind = size(r,1);
+%Mark Skin Pixels
+for i=1:numind
+    out(r(i),c(i),:) = [0 0 255];
+    bin(r(i),c(i)) = 1;
+end
+%imshow(img_orig);
+%figure; imshow(out);
+%figure; imshow(bin);
+%now for count of fingers
+img2=im2bw(bin,graythresh(bin));
+img2=~img2;
+%majority morphological operation-Sets a pixel to 1 if five or more pixels in its 3-by-3 neighborhood are 1s; otherwise, it sets the pixel to 0.
+img2=bwmorph(img2,'majority',Inf);
+B = bwboundaries(img2);
+figure;imshow(img2);
+%text(10,10,strcat('\color{green}Objects Found:',num2str(length(B))))
+hold onunction image2vectorSample(I)
+%srcFiles = dir('C:\Users\Monika\Downloads\mini project\a\5 training set\Ima1.jpg');  % the folder in which ur images exists
+ %   filename = strcat('C:\Users\Monika\Downloads\mini project\a\5 training set\Ima1.jpg');
+    %I = imread(filename);
+    imageVector = reshape(I, 1, []);
+        temp=imageVector';
+save('sample3.mat','temp');
+‎input.mat
+125 KB
+Binary file not shown.
+‎matrix.jpg
+1.44 MB
+
+
+
+‎mudraGUI.fig
+9.02 KB
+Binary file not shown.
+‎mudraGUI.m
++168
+Original file line number	Diff line number	Diff line change
+@@ -0,0 +1,168 @@
+function varargout = mudraGUI(varargin)
+% MUDRAGUI MATLAB code for mudraGUI.fig
+%      MUDRAGUI, by itself, creates a new MUDRAGUI or raises the existing
+%      singleton*.
+%
+%      H = MUDRAGUI returns the handle to a new MUDRAGUI or the handle to
+%      the existing singleton*.
+%
+%      MUDRAGUI('CALLBACK',hObject,eventData,handles,...) calls the local
+%      function named CALLBACK in MUDRAGUI.M with the given input arguments.
+%
+%      MUDRAGUI('Property','Value',...) creates a new MUDRAGUI or raises the
+%      existing singleton*.  Starting from the left, property value pairs are
+%      applied to the GUI before mudraGUI_OpeningFcn gets called.  An
+%      unrecognized property name or invalid value makes property application
+%      stop.  All inputs are passed to mudraGUI_OpeningFcn via varargin.
+%
+%      *See GUI Options on GUIDE's Tools menu.  Choose "GUI allows only one
+%      instance to run (singleton)".
+%
+% See also: GUIDE, GUIDATA, GUIHANDLES
+% Edit the above text to modify the response to help mudraGUI
+% Last Modified by GUIDE v2.5 31-Mar-2016 01:09:03
+% Begin initialization code - DO NOT EDIT
+gui_Singleton = 1;
+gui_State = struct('gui_Name',       mfilename, ...
+                   'gui_Singleton',  gui_Singleton, ...
+                   'gui_OpeningFcn', @mudraGUI_OpeningFcn, ...
+                   'gui_OutputFcn',  @mudraGUI_OutputFcn, ...
+                   'gui_LayoutFcn',  [] , ...
+                   'gui_Callback',   []);
+if nargin && ischar(varargin{1})
+    gui_State.gui_Callback = str2func(varargin{1});
+end
+if nargout
+    [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
+else
+    gui_mainfcn(gui_State, varargin{:});
+end
+% End initialization code - DO NOT EDIT
+% --- Executes just before mudraGUI is made visible.
+function mudraGUI_OpeningFcn(hObject, eventdata, handles, varargin)
+% This function has no output args, see OutputFcn.
+% hObject    handle to figure
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% varargin   command line arguments to mudraGUI (see VARARGIN)
+% Choose default command line output for mudraGUI
+handles.output = hObject;
+% Update handles structure
+guidata(hObject, handles);
+% UIWAIT makes mudraGUI wait for user response (see UIRESUME)
+% uiwait(handles.Mudra);
+% --- Outputs from this function are returned to the command line.
+function varargout = mudraGUI_OutputFcn(hObject, eventdata, handles) 
+% varargout  cell array for returning output args (see VARARGOUT);
+% hObject    handle to figure
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% Get default command line output from handles structure
+varargout{1} = handles.output;
+%-------------Code for background--------------
+% This creates the 'background' axes
+ha = axes('units','normalized', ...
+            'position',[0 0 1 1]);
+% Move the background axes to the bottom
+uistack(ha,'bottom');
+% Load in a background image and display it using the correct colors
+% The image used below, is in the Image Processing Toolbox.  If you do not have %access to this toolbox, you can use another image file instead.
+I=imread('matrix.jpg');
+hi = imagesc(I);
+colormap gray
+% Turn the handlevisibility off so that we don't inadvertently plot into the axes again
+% Also, make the axes invisible
+set(ha,'handlevisibility','off', ...
+            'visible','off')
+%To adjust transparency of background image.
+set(hi,'alphadata',.7)
+%------------------------------------------
+% --- Executes on button press in browse.
+function browse_Callback(hObject, eventdata, handles)
+global frame ctrue 
+ctrue=0;
+frame=browse;
+warning('off', 'Images:initSize:adjustingMag');
+% hObject    handle to browse (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% --- Executes on button press in capture.
+function capture_Callback(hObject, eventdata, handles)
+global ctrue
+ctrue = 1;
+captureGUI;
+% hObject    handle to capture (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% --- Executes on button press in featureVisualization.
+function featureVisualization_Callback(hObject, eventdata, handles)
+global frame ctrue 
+if(ctrue==1)
+    frame=imread('frame.png');
+end
+frame=resize(frame);
+frame = 255 * uint8(frame);
+assignin('base','imgtest',frame);
+figure,imshow(frame);
+%extractGesture(frame);
+% hObject    handle to featureVisualization (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% --- Executes on button press in handGestureRecognition.
+function handGestureRecognition_Callback(hObject, eventdata, handles)
+global frame;
+image2vectorSample(frame);
+load('sample3.mat');
+assignin('base','inptvctr',temp);
+output=myNeuralNetworkFunction1(double(temp));
+output
+[v,idx]=max(output);
+prob_vector=v
+output=idx
+% hObject    handle to handGestureRecognition (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% --- Executes on button press in viewSourceCode.
+function viewSourceCode_Callback(hObject, eventdata, handles)
+show_sourcecode;
+% hObject    handle to viewSourceCode (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% --- Executes on button press in readMe.
+function readMe_Callback(hObject, eventdata, handles)
+show_readme;
+% hObject    handle to readMe (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% --- Executes on button press in exitButton.
+function exitButton_Callback(hObject, eventdata, handles)
+close(mudraGUI);
+% hObject    handle to exitButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+‎myNeuralNetworkFunction1.m
++81
+Large diffs are not rendered by default.
+‎myNeuralNetworkFunction2.m
++109
+Large diffs are not rendered by default.
+‎output.m
++16
+Original file line number	Diff line number	Diff line change
+@@ -0,0 +1,16 @@
+a=[1 0 0 0 0];
+b=[0 1 0 0 0];
+c=[0 0 1 0 0];
+d=[0 0 0 1 0];
+e=[0 0 0 0 1];
+r=repmat(a',1,20);
+s=repmat(b',1,28);
+t=repmat(c',1,29);
+u=repmat(d',1,31);
+v=repmat(e',1,37);
+outputv=[r,s,t,u,v];
+save('outputv.mat','outputv');
+a=load('outputv.mat')
+load('input.mat');
+%t=[r;s];
+‎outputv.mat
+202 Bytes
+Binary file not shown.
+‎readMe.txt
++8
+Original file line number	Diff line number	Diff line change
+@@ -0,0 +1,8 @@
+Instructions to use the Hand Gesture Recognizer.
+constriants-
+%Need a good quality webcam,Tested in Dell Inspiron 15. 
+%Back ground is ensured to be white colour.
+%Test Image can be browsed from a folder or captured in realtime.
+%Hand extraction and feature visualization can be done.
+%you can add more no. of gestures by training each gesture consist of more 
+than 25 trained samples.Currently implemented for numbers 1 to 5.
+‎resize.m
++12
+Original file line number	Diff line number	Diff line change
+@@ -0,0 +1,12 @@
+function I=resize(frame)
+%    srcFiles = dir('E:\Downloads\Compressed\hand\4\*.jpg');  % the folder in which ur images exists
+%    filename = strcat('E:\Downloads\Compressed\hand\4\',srcFiles(i).name);
+%    I = imread(filename);
+    I= extractGesture(frame);
+    I = imresize(I,[80 45]);%give required resolution in [ ] square braces 
+%    fname=['Ima' num2str(i) '.jpg']; %output images will be as Ima1.jpg Ima2.jpg Ima3.jpg in the same specified folder above 
+%    imwrite(J,fname,'jpg')
+%     figure, imshow(J);
+end
+
